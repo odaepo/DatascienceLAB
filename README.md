@@ -1,2 +1,2 @@
 # DatascienceLAB
-Laboratorio dedicato alla Datacience
+Laboratorio dedicato alla Datascience
