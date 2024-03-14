@@ -1,5 +1,5 @@
-Descrizione t-SNE
-=================
+# Descrizione t-SNE
+
 Sostanzialmente il t-SNE è un non-linear embedder adatto alla riduzione della dimensionalità elevata di un dataset.
 
 https://www.youtube.com/watch?v=MnRskV3NY1k
@@ -9,4 +9,8 @@ Kobak è attualmente il ricercatore più attivo sul t-SNE ed ha contribuito magg
 Il t-SNE è stato proposto per la prima volta da Geoffry Hinton intorno nei primissimi anni 2000.
 
 
+## Codice
+
+- `00_tSNE.ipynb` contiene codice pytorch per tSNE (ancora non e' stato discusso
+- `laboratorio_data_analisi.py` contiene il codice discusso negli incontri
 
