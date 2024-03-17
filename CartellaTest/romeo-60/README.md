@@ -1,4 +1,4 @@
-# Fork e Pullrequest ri Romeo
+# Fork e Pullrequest di Romeo
 
 Questa cartella ha lo scopo di giocare con il fork e pullrequest!
 
