@@ -13,4 +13,5 @@ Il t-SNE è stato proposto per la prima volta da Geoffry Hinton intorno nei prim
 
 - `00_tSNE.ipynb` contiene codice pytorch per tSNE (ancora non e' stato discusso
 - `laboratorio_data_analisi.py` contiene il codice discusso negli incontri
+- `data/healthcare-dataset-stroke-data.csv` contiene il dataset selezionato e scaricato da Kaggle https://www.kaggle.com/datasets/fedesoriano/stroke-prediction-dataset
 
