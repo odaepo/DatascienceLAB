@@ -1,3 +1,6 @@
+# Scopo del drill di data analysis:
+Utilizzare nella pipeline il non-linear embedder t-SNE
+
 # Descrizione t-SNE
 
 Sostanzialmente il t-SNE è un non-linear embedder adatto alla riduzione della dimensionalità elevata di un dataset.
