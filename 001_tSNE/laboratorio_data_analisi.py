@@ -129,23 +129,13 @@ print(df.shape[0])
 #######   mid EDA: part 1  ############
 
 ### Check target labels balance:
-print("\nTarget Labels:")
+print("\n ########  Target Labels Balance:  ########  \n")
 print(f"\n {df['stroke'].value_counts()}")
 print(f"\nratio stroke/no stroke:\n {round(df['stroke'].value_counts()[1]/df['stroke'].value_counts()[0], 2)}")
 
-from imblearn.over_sampling import RandomOverSampler
-ros = RandomOverSampler(random_state=0)
-
-# Define your features (X) and target (y)
-#X = df.drop('stroke', axis=1)
-#y = df['stroke']
-
-# Split the data into training and test sets
-#X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
-X_resampled, y_resampled = ros.fit_resample(X, y)
-
 df.info()
+
+### Transform categorical data in continuos data:
 
 from sklearn.preprocessing import OneHotEncoder
 import pandas as pd
@@ -171,30 +161,152 @@ encoded_df = pd.DataFrame(encoded_data, columns=encoder.get_feature_names_out(ca
 # Concatenare con le colonne non categoriche
 final_df = pd.concat([encoded_df, df.drop(columns=categorical_columns)], axis=1)
 final_df = final_df.drop(columns=['id'])
+
+print("\n ########  Dataframe info after One Hot Encoding:  ######## \n")
 final_df.info()
 
 # eliminazione NaN prima di usare tsne
 final_df = final_df.dropna()
+
+print("\n ########  Dataframe info after NA removal:  ######## \n")
 final_df.info()
+
+### Check again target labels balance:
+
+print("\n ########  Target Labels Balance:  ########  \n")
+print(f"\n {final_df['stroke'].value_counts()}")
+print(f"\nratio stroke/no stroke:\n {round(final_df['stroke'].value_counts()[1]/final_df['stroke'].value_counts()[0], 2)}")
+
+### Correlation 1
+
+### Try a Pearson correlation to verify which features show a real connection
+### with 'stroke' target label:
+
+import matplotlib.pyplot as plt
+import numpy as np
+
+plt.figure(figsize=(13,8))
+# define the mask to set the values in the upper triangle to True
+mask = np.triu(np.ones_like(final_df.corr(), dtype=bool))
+heatmap = sns.heatmap(final_df.corr(), mask=mask, vmin=-1, vmax=1, annot=True, cmap='BrBG')
+heatmap.set_title('Triangle Correlation Heatmap', fontdict={'fontsize':16}, pad=16);
+
+### t-SNE 1
+
+### Try a t-SNE to verify cluster:
 
 from sklearn.manifold import TSNE
 import matplotlib.pyplot as plt
 
-# video teoria sul tsne : https://www.youtube.com/watch?v=MnRskV3NY1k&t=455s
-# si può aggiungere un PCA inizialmente per ridurre la randomicità
-
 tsne = TSNE(n_components=2, random_state=42)
 
-# Applicare t-SNE ai dati vettorizzati
-tsne_results = tsne.fit_transform(final_df)
+# apply t-SNE on vectorialized data:
+tsne_results = tsne.fit_transform(final_df.iloc[:, 12:17])
 
-# plot
+# plot 2D embedding
 plt.figure(figsize=(8, 8))
-plt.scatter(tsne_results[:, 0], tsne_results[:, 1])
+plt.scatter(tsne_results[:, 0], tsne_results[:, 1], c=final_df.iloc[:,-1])
 plt.title('t-SNE visualization')
 plt.xlabel('Componente 1')
 plt.ylabel('Componente 2')
 plt.show()
+
+#####   DATASET BALANCING  ##########
+
+from collections import Counter
+from sklearn.datasets import make_classification
+from imblearn.over_sampling import SMOTE
+import numpy as np
+
+#### Define your features (X) and target (y)
+
+# features could be passed in dataframe format
+X = final_df.iloc[:, 0:18]
+
+# target labels has to be passed as numpy array
+y = final_df['stroke'].astype('category')
+y = y.to_numpy()
+
+print('\n###  Original dataset shape: %s\n' % Counter(y))
+
+# appply SMOTE oversampling technique to balance dataset:
+sm = SMOTE(random_state=42)
+X_res, y_res = sm.fit_resample(X, y)
+
+print('\n###  Resampled dataset shape: %s\n' % Counter(y_res))
+
+### Correlation 2
+
+### Try a Pearson correlation to verify which features show a real connection
+### with 'stroke' target label:
+
+import matplotlib.pyplot as plt
+import numpy as np
+
+final_df_sm = X_res.assign(stroke=y_res)
+
+plt.figure(figsize=(13,8))
+# define the mask to set the values in the upper triangle to True
+mask = np.triu(np.ones_like(final_df_sm.corr(), dtype=bool))
+heatmap = sns.heatmap(final_df_sm.corr(), mask=mask, vmin=-1, vmax=1, annot=True, cmap='BrBG')
+heatmap.set_title('Triangle Correlation Heatmap - after target label balancing', fontdict={'fontsize':16}, pad=16);
+
+### FEATURE ENGINEEARING
+
+# Crete a feature to express probable Metabolic Syndrome named 'MetS':
+# metabolic syndrome is significantly associated with both stroke recurrence and all-cause mortality.
+# Overweight (bmi >27) and diabete (avg glucose level > 140) are signature feature of MetS. Along
+# this two, other conditions like high colesterol work towards a bad cardiocirculatory state.
+
+import pandas as pd
+import numpy as np
+final_df_sm['MetS'] = np.where((final_df_sm['avg_glucose_level'] > 140) & (final_df_sm['bmi'] > 27), 1, 0)
+
+### Correlation 3
+
+### Try a Pearson correlation to verify which features show a real connection
+### with 'stroke' target label:
+
+import matplotlib.pyplot as plt
+import numpy as np
+
+plt.figure(figsize=(13,8))
+# define the mask to set the values in the upper triangle to True
+mask = np.triu(np.ones_like(final_df_sm.corr(), dtype=bool))
+heatmap = sns.heatmap(final_df_sm.corr(), mask=mask, vmin=-1, vmax=1, annot=True, cmap='BrBG')
+heatmap.set_title('Triangle Correlation Heatmap - after adding MetS feature', fontdict={'fontsize':16}, pad=16);
+
+### t-SNE 2
+
+### Try a t-SNE to verify cluster:
+
+from sklearn.manifold import TSNE
+import matplotlib.pyplot as plt
+
+tsne = TSNE(n_components=2, random_state=42)
+
+# apply t-SNE on vectorialized data:
+tsne_results = tsne.fit_transform(X_res.iloc[:,0:20])
+
+# plot 2D embeddingplt.figure(figsize=(8, 8))
+plt.scatter(tsne_results[:, 0], tsne_results[:, 1], c=y_res)
+plt.title('t-SNE visualization')
+plt.xlabel('Componente 1')
+plt.ylabel('Componente 2')
+plt.show()
+
+# Applicare t-SNE ai dati vettorizzati
+tsne_results = tsne.fit_transform(final_df.iloc[:, 0:17])
+
+# plot
+plt.figure(figsize=(8, 8))
+plt.scatter(tsne_results[:, 0], tsne_results[:, 1], c=final_df.iloc[:,-1])
+plt.title('t-SNE visualization')
+plt.xlabel('Componente 1')
+plt.ylabel('Componente 2')
+plt.show()
+
+############# from here code not updated on 17/3/2024
 
 # cerchiamo dei gruppi in questo dataset
 from sklearn.cluster import KMeans
