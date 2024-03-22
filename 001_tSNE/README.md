@@ -1,3 +1,6 @@
+# Scopo del drill di data analysis:
+Utilizzare nella pipeline il non-linear embedder t-SNE
+
 # Descrizione t-SNE
 
 Sostanzialmente il t-SNE è un non-linear embedder adatto alla riduzione della dimensionalità elevata di un dataset.
@@ -13,4 +16,5 @@ Il t-SNE è stato proposto per la prima volta da Geoffry Hinton intorno nei prim
 
 - `00_tSNE.ipynb` contiene codice pytorch per tSNE (ancora non e' stato discusso
 - `laboratorio_data_analisi.py` contiene il codice discusso negli incontri
+- `data/healthcare-dataset-stroke-data.csv` contiene il dataset selezionato e scaricato da Kaggle https://www.kaggle.com/datasets/fedesoriano/stroke-prediction-dataset
 
