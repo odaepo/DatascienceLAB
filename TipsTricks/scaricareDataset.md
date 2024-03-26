@@ -9,7 +9,7 @@ Per accedere al dataset è necessario avere un account Kaggle e generare un file
 
  - Creare un account su Kaggle e accedere al proprio profilo: cliccare sull'icona dell'account in alto a destra e selezionare "Settings".
  - Nella sezione API, cliccare "Create New Token" per scaricare il file kaggle.json.
- - Copiare il file kaggle.json in Google Drive. Nel nostro esempio lo copieremo nella cartella "AI" quindi il percorso del file sarà "AI/kaggle2.json". Questo file conterrà le vostre credenziali e ci permetterà di accedere al dataset di Kaggle. Verrà copiato nella directory locale di Google Colab e sarà letto automaticamente dalla libreria per usare le vostre credenziali e scaricare il dataset.
+ - Copiare il file kaggle.json in Google Drive. Nel nostro esempio lo copieremo nella cartella "AI" quindi il percorso del file sarà "AI/kaggle.json". Questo file conterrà le vostre credenziali e ci permetterà di accedere al dataset di Kaggle. Verrà copiato nella directory locale di Google Colab e sarà letto automaticamente dalla libreria per usare le vostre credenziali e scaricare il dataset.
 
 montare il drive:
 
