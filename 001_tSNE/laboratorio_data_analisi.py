@@ -9,12 +9,26 @@ Original file is located at
 Codice Tsne Carmine e David
 """
 
+from google.colab import drive
+drive.mount('/content/drive')
+
+# !cp /content/drive/MyDrive/AI/kaggle.json .
+# !pip install opendatasets --upgrade --quiet
+import opendatasets as od
+
+# set address to dataset to download
+dataset = 'https://www.kaggle.com/datasets/fedesoriano/stroke-prediction-dataset'
+
+# dowload dataset to path indicated kaggle path:
+# ./stroke-prediction-dataset/healthcare-dataset-stroke-data.csv
+od.download(dataset)
+
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
-# Dataset di partenza : https://www.kaggle.com/datasets/fedesoriano/stroke-prediction-dataset
+
 # import dataset csv
-name = '/content/healthcare-dataset-stroke-data.csv'
+name = 'stroke-prediction-dataset/healthcare-dataset-stroke-data.csv'
 
 # construct data frame
 df = pd.read_csv (name)
@@ -198,10 +212,11 @@ heatmap.set_title('Triangle Correlation Heatmap', fontdict={'fontsize':16}, pad=
 from sklearn.manifold import TSNE
 import matplotlib.pyplot as plt
 
-tsne = TSNE(n_components=2, random_state=42)
+tsne = TSNE(n_components=2, random_state=15)
+#tsne = TSNE(n_components=2, random_state=15, init='random')
 
 # apply t-SNE on vectorialized data:
-tsne_results = tsne.fit_transform(final_df.iloc[:, 12:17])
+tsne_results = tsne.fit_transform(final_df.iloc[:, 12:18])
 
 # plot 2D embedding
 plt.figure(figsize=(8, 8))
@@ -251,6 +266,8 @@ mask = np.triu(np.ones_like(final_df_sm.corr(), dtype=bool))
 heatmap = sns.heatmap(final_df_sm.corr(), mask=mask, vmin=-1, vmax=1, annot=True, cmap='BrBG')
 heatmap.set_title('Triangle Correlation Heatmap - after target label balancing', fontdict={'fontsize':16}, pad=16);
 
+final_df_sm.info()
+
 ### FEATURE ENGINEEARING
 
 # Crete a feature to express probable Metabolic Syndrome named 'MetS':
@@ -276,230 +293,261 @@ mask = np.triu(np.ones_like(final_df_sm.corr(), dtype=bool))
 heatmap = sns.heatmap(final_df_sm.corr(), mask=mask, vmin=-1, vmax=1, annot=True, cmap='BrBG')
 heatmap.set_title('Triangle Correlation Heatmap - after adding MetS feature', fontdict={'fontsize':16}, pad=16);
 
-### t-SNE 2
-
-### Try a t-SNE to verify cluster:
-
 from sklearn.manifold import TSNE
 import matplotlib.pyplot as plt
 
-tsne = TSNE(n_components=2, random_state=42)
+# Since that 'stroke' is at column index 18 I will not consider it for the Tsne algorithm
+# Select all columns except the one at index 18
+column_indexes = [i for i in range(final_df_sm.shape[1]) if i != 18]
 
-# apply t-SNE on vectorialized data:
-tsne_results = tsne.fit_transform(X_res.iloc[:,0:20])
+# Apply t-SNE on the selected features, excluding 'stroke'
+tsne = TSNE(n_components=2, random_state=42, perplexity=300)
+tsne_results = tsne.fit_transform(final_df_sm.iloc[:, column_indexes])
 
-# plot 2D embeddingplt.figure(figsize=(8, 8))
-plt.scatter(tsne_results[:, 0], tsne_results[:, 1], c=y_res)
-plt.title('t-SNE visualization')
-plt.xlabel('Componente 1')
-plt.ylabel('Componente 2')
-plt.show()
 
-# Applicare t-SNE ai dati vettorizzati
-tsne_results = tsne.fit_transform(final_df.iloc[:, 0:17])
-
-# plot
 plt.figure(figsize=(8, 8))
-plt.scatter(tsne_results[:, 0], tsne_results[:, 1], c=final_df.iloc[:,-1])
+plt.scatter(tsne_results[:, 0], tsne_results[:, 1], c=y_res)  # Replace 'y_res' as needed
 plt.title('t-SNE visualization')
-plt.xlabel('Componente 1')
-plt.ylabel('Componente 2')
+plt.xlabel('Component 1')
+plt.ylabel('Component 2')
 plt.show()
 
-############# from here code not updated on 17/3/2024
+from sklearn.mixture import GaussianMixture
 
-# cerchiamo dei gruppi in questo dataset
-from sklearn.cluster import KMeans
-import numpy as np
+# Assuming tsne_results is your 2D array of t-SNE transformed features
+# and you want to use the same number of clusters as before (n_clusters=2)
 
-# Applicazione di K-Means sui risultati t-SNE
-n_clusters =2  # Sostituisci con il numero ottimale di cluster che desideri trovare
-kmeans = KMeans(n_clusters=n_clusters, random_state=42)
-clusters = kmeans.fit_predict(tsne_results)
+# Initialize the Gaussian Mixture Model
+n_clusters=3
+gmm = GaussianMixture(n_components=n_clusters, random_state=42)
 
-# Aggiungere l'assegnazione del cluster al DataFrame
-final_df['Cluster'] = clusters
-import matplotlib.pyplot as plt
-import seaborn as sns
+# Fit the model and predict the cluster assignments for each data point
+gmm_clusters = gmm.fit_predict(tsne_results)
 
-# Visualizzazione dei cluster t-SNE
+# Add the GMM cluster assignments to your DataFrame
+final_df_sm['Cluster'] = gmm_clusters
+
+# Visualize the clusters
 plt.figure(figsize=(10, 8))
-sns.scatterplot(x=tsne_results[:, 0], y=tsne_results[:, 1], hue=clusters, palette='viridis', s=50, alpha=0.6)
-plt.title('t-SNE con Cluster K-Means')
-plt.xlabel('Componente t-SNE 1')
-plt.ylabel('Componente t-SNE 2')
+sns.scatterplot(x=tsne_results[:, 0], y=tsne_results[:, 1], hue=gmm_clusters, palette='viridis', s=50, alpha=0.6)
+plt.title('t-SNE with GMM Clusters')
+plt.xlabel('t-SNE Component 1')
+plt.ylabel('t-SNE Component 2')
+plt.legend(title='Cluster')
 plt.show()
 
-import matplotlib.pyplot as plt
-import seaborn as sns
+# Assuming final_df_sm is your DataFrame and 'Cluster' column has been added from a clustering algorithm.
 
-# Calcolare la media per le variabili numeriche in ciascun cluster
-cluster_summary = final_df.groupby('Cluster').mean().reset_index()
+# Calculate the mean for each variable within each cluster
+cluster_means = final_df_sm.groupby('Cluster').mean()
 
-# Impostare il numero di colonne per i subplot
-n_cols = 3  # Numero di colonne per i subplot
-n_rows = (len(cluster_summary.columns) - 1 + n_cols - 1) // n_cols  # Calcola il numero di righe necessarie
+# Calculate the sum of the means for each variable across all clusters
+cluster_sums = cluster_means.sum(axis=0)
 
-# Impostare la palette di colori in base al numero di cluster
-palette = sns.color_palette("viridis", n_clusters)
+# Calculate the relative fraction for each variable within each cluster
+relative_fractions = cluster_means.div(cluster_sums, axis=1)
 
-# Inizializzare la figura
-plt.figure(figsize=(n_cols * 6, n_rows * 5))  # Modifica le dimensioni se necessario
+# Calculate the summed relative fractions for each variable across all clusters
+summed_relative_fractions = relative_fractions.sum(axis=1)
 
-for i, column in enumerate(cluster_summary.columns[1:]):  # Esclude 'Cluster'
-    plt.subplot(n_rows, n_cols, i + 1)  # Usa n_rows e n_cols qui
-    sns.barplot(x='Cluster', y=column, data=cluster_summary, palette=palette)
-    plt.title(f'Distribuzione di {column} per Cluster')
-    plt.ylabel('Media')
-    plt.xlabel('Cluster')
+# Sort the rows (clusters) based on the summed relative fractions
+sorted_clusters = summed_relative_fractions.sort_values(ascending=False).index
 
-plt.tight_layout()
+# Reorder the rows (clusters) according to the sorted indices
+sorted_relative_fractions = relative_fractions.loc[sorted_clusters]
+
+# Now transpose the DataFrame for the heatmap
+sorted_relative_fractions_transposed = sorted_relative_fractions.T
+
+# Create the heatmap with sorted clusters
+plt.figure(figsize=(10, 8))
+sns.heatmap(sorted_relative_fractions_transposed, annot=True, cmap='viridis', fmt=".2f")
+plt.title("Heatmap of Relative Fractions of Variable Means by Cluster, Sorted by Summed Relative Fraction")
+plt.ylabel("Variable")
+plt.xlabel("Cluster")
 plt.show()
 
-import matplotlib.pyplot as plt
-import numpy as np
-
-plt.figure(figsize=(8,8))
-# define the mask to set the values in the upper triangle to True
-mask = np.triu(np.ones_like(df.corr(), dtype=bool))
-heatmap = sns.heatmap(df.corr(), mask=mask, vmin=-1, vmax=1, annot=True, cmap='BrBG')
-heatmap.set_title('Triangle Correlation Heatmap', fontdict={'fontsize':18}, pad=16);
-df.corr()
-
-import seaborn as sns
-sns.set_theme(style="ticks")
-plt.figure(figsize=(8,8))
-sns.pairplot(df, hue="stroke")
-
-import pandas as pd
-from sklearn.model_selection import train_test_split
-from sklearn.compose import ColumnTransformer
-from sklearn.preprocessing import OneHotEncoder
-from sklearn.pipeline import Pipeline
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score, confusion_matrix
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import train_test_split
 
-# Assuming 'df' is your DataFrame
-df.info()
-# Drop the 'id' column
-df = df.drop(columns=['id'])
+# split X variable Y target
+X = final_df_sm.drop('stroke', axis=1)  # Features
+y = final_df_sm['stroke']  # Target
 
-# Identify the categorical columns by name
-categorical_features = ['gender', 'ever_married', 'work_type', 'Residence_type', 'smoking_status']
+# Split the data into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
 
-# Define the transformer for categorical columns
-categorical_transformer = OneHotEncoder()
+# Initialize the Random Forest Classifier
+rf = RandomForestClassifier(n_estimators=100, random_state=42)
 
-# Create the preprocessing pipeline with one-hot encoding for categorical columns
-preprocessor = ColumnTransformer(
-    transformers=[
-        ('cat', categorical_transformer, categorical_features)
-    ],
-    remainder='passthrough'  # This will keep all other features untouched
-)
+# Fit the model on the training data
+rf.fit(X_train, y_train)
 
-df.corr()
+# Get feature importances
+importances = rf.feature_importances_
 
-# Define your features (X) and target (y)
-X = df.drop('stroke', axis=1)
-y = df['stroke']
+# Sort the feature importances in descending order
+sorted_indices = np.argsort(importances)[::-1]
 
-# Split the data into training and test sets
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
-# ###################################### OVER-SAMPLING:
-# https://imbalanced-learn.org/stable/over_sampling.html
-
-# from imblearn.over_sampling import RandomOverSampler
-# ros = RandomOverSampler(random_state=0)
-
-# X_ros, y_ros = ros.fit_resample(X, y)
-
-# # Split the data into training and test sets
-# X_ros_train, X_ros_test, y_ros_train, y_ros_test = train_test_split(X_ros, y_ros, test_size=0.2, random_state=42)
-
-# ############################################################
-
-
-# Create the full pipeline with preprocessing and the classifier
-pipeline = Pipeline([
-    ('preprocessor', preprocessor),
-    ('classifier', RandomForestClassifier(random_state=42))
-])
-
-# Train the model
-pipeline.fit(X_train, y_train)
-
-# Make predictions
-predictions = pipeline.predict(X_test)
-
-# train set target label balance (0.044 for dataset):
-y_train.value_counts()[1]/y_train.value_counts()[0]
-
-# test set target label balance (0.044 for dataset):
-y_test.value_counts()[1]/y_test.value_counts()[0]
-
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score
-
-# Evaluate on the training set
-train_predictions = pipeline.predict(X_train)
-print("Training Metrics:")
-print(f"Accuracy: {accuracy_score(y_train, train_predictions):.4f}")
-print(f"Precision: {precision_score(y_train, train_predictions):.4f}")
-print(f"Recall: {recall_score(y_train, train_predictions):.4f}")
-print(f"F1 Score: {f1_score(y_train, train_predictions):.4f}")
-train_probs = pipeline.predict_proba(X_train)[:, 1]  # Probabilities for the positive class
-print(f"ROC AUC: {roc_auc_score(y_train, train_probs):.4f}")
-
-# Evaluate on the test set
-print("\nTest Metrics:")
-test_predictions = pipeline.predict(X_test)
-print(f"Accuracy: {accuracy_score(y_test, test_predictions):.4f}")
-print(f"Precision: {precision_score(y_test, test_predictions):.4f}")
-print(f"Recall: {recall_score(y_test, test_predictions):.4f}")
-print(f"F1 Score: {f1_score(y_test, test_predictions):.4f}")
-test_probs = pipeline.predict_proba(X_test)[:, 1]  # Probabilities for the positive class
-print(f"ROC AUC: {roc_auc_score(y_test, test_probs):.4f}")
-
-import numpy as np
-
-# Train the model as before
-pipeline.fit(X_train, y_train)
-
-# Get the feature importances
-importances = pipeline.named_steps['classifier'].feature_importances_
-
-# Get the names of the one-hot encoded features
-encoder = pipeline.named_steps['preprocessor'].named_transformers_['cat']
-encoded_features = encoder.get_feature_names_out(categorical_features)
-
-# Combine the feature names from one-hot encoding and the remainder of the columns
-all_features = np.concatenate([encoded_features, X_train.columns.difference(categorical_features)])
-
-# Create a DataFrame to display feature importances
-feature_importances = pd.DataFrame({
-    'Feature': all_features,
-    'Importance': importances
-})
-
-# Sort the DataFrame to show the most important features at the top
-feature_importances = feature_importances.sort_values(by='Importance', ascending=False)
-
-print(feature_importances)
-
-import matplotlib.pyplot as plt
-
-# Number of features to plot (you can change this to your preference or use len(feature_importances) for all)
-num_features = len(feature_importances)
-
-# Sort features according to importance
-feature_importances = feature_importances.sort_values(by='Importance', ascending=False)
-
-# Plotting
-plt.figure(figsize=(10, 10))
-plt.barh(feature_importances['Feature'][:num_features], feature_importances['Importance'][:num_features])
-plt.xlabel('Importance')
-plt.ylabel('Feature')
-plt.gca().invert_yaxis()  # To display the most important feature at the top
-plt.title('Feature Importances')
-
+# Plot the feature importances
+plt.figure(figsize=(10, 6))
+plt.title("Feature Importances")
+plt.bar(range(X.shape[1]), importances[sorted_indices], align='center')
+plt.xticks(range(X.shape[1]), X.columns[sorted_indices], rotation=90)
+plt.ylabel('Relative Importance')
 plt.show()
+
+
+# Predictions on the training set
+y_train_pred = rf.predict(X_train)
+
+# Predictions on the test set
+y_test_pred = rf.predict(X_test)
+
+# Calculate metrics for the training set
+train_accuracy = accuracy_score(y_train, y_train_pred)
+train_precision = precision_score(y_train, y_train_pred, average='macro')
+train_recall = recall_score(y_train, y_train_pred, average='macro')
+train_f1 = f1_score(y_train, y_train_pred, average='macro')
+
+# Calculate metrics for the test set
+test_accuracy = accuracy_score(y_test, y_test_pred)
+test_precision = precision_score(y_test, y_test_pred, average='macro')
+test_recall = recall_score(y_test, y_test_pred, average='macro')
+test_f1 = f1_score(y_test, y_test_pred, average='macro')
+
+# Print out the metrics
+print("Training Metrics:")
+print(f"Accuracy: {train_accuracy:.4f}")
+print(f"Precision: {train_precision:.4f}")
+print(f"Recall: {train_recall:.4f}")
+print(f"F1 Score: {train_f1:.4f}")
+
+print("\nTest Metrics:")
+print(f"Accuracy: {test_accuracy:.4f}")
+print(f"Precision: {test_precision:.4f}")
+print(f"Recall: {test_recall:.4f}")
+print(f"F1 Score: {test_f1:.4f}")
+
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score, confusion_matrix
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import train_test_split
+
+# split X variable Y target
+X = final_df_sm.drop(['stroke', 'Cluster'], axis=1)  # Features
+y = final_df_sm['stroke']  # Target
+
+# Split the data into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+
+# Initialize the Random Forest Classifier
+rf = RandomForestClassifier(n_estimators=100, random_state=42)
+
+# Fit the model on the training data
+rf.fit(X_train, y_train)
+
+# Get feature importances
+importances = rf.feature_importances_
+
+# Sort the feature importances in descending order
+sorted_indices = np.argsort(importances)[::-1]
+
+# Plot the feature importances
+plt.figure(figsize=(10, 6))
+plt.title("Feature Importances")
+plt.bar(range(X.shape[1]), importances[sorted_indices], align='center')
+plt.xticks(range(X.shape[1]), X.columns[sorted_indices], rotation=90)
+plt.ylabel('Relative Importance')
+plt.show()
+
+
+# Predictions on the training set
+y_train_pred = rf.predict(X_train)
+
+# Predictions on the test set
+y_test_pred = rf.predict(X_test)
+
+# Calculate metrics for the training set
+train_accuracy = accuracy_score(y_train, y_train_pred)
+train_precision = precision_score(y_train, y_train_pred, average='macro')
+train_recall = recall_score(y_train, y_train_pred, average='macro')
+train_f1 = f1_score(y_train, y_train_pred, average='macro')
+
+# Calculate metrics for the test set
+test_accuracy = accuracy_score(y_test, y_test_pred)
+test_precision = precision_score(y_test, y_test_pred, average='macro')
+test_recall = recall_score(y_test, y_test_pred, average='macro')
+test_f1 = f1_score(y_test, y_test_pred, average='macro')
+
+# Print out the metrics
+print("Training Metrics:")
+print(f"Accuracy: {train_accuracy:.4f}")
+print(f"Precision: {train_precision:.4f}")
+print(f"Recall: {train_recall:.4f}")
+print(f"F1 Score: {train_f1:.4f}")
+
+print("\nTest Metrics:")
+print(f"Accuracy: {test_accuracy:.4f}")
+print(f"Precision: {test_precision:.4f}")
+print(f"Recall: {test_recall:.4f}")
+print(f"F1 Score: {test_f1:.4f}")
+
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score, confusion_matrix
+from sklearn.ensemble import RandomForestClassifier
+import xgboost as xgb
+# evaluate a logistic regression model using repeated k-fold cross-validation
+from sklearn.model_selection import RepeatedKFold
+# for cross validation and multiple scores calculation
+# https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.cross_validate.html
+from sklearn.model_selection import cross_validate
+
+
+# prepare the cross-validation procedure
+cv = RepeatedKFold(n_splits=10, n_repeats=3, random_state=1)
+
+# create models
+model_rfc = RandomForestClassifier(n_estimators=100, random_state=42)
+model_xgb = xgb.XGBClassifier(use_label_encoder=False, eval_metric='mlogloss', random_state=42)
+
+# evaluate models:
+# inputs are X and y of original dataset
+# function will split and CV creating 10 trained model and make 10 prediction on test part
+scores_rfc = cross_validate(model_rfc, X, y, return_train_score=True, scoring=('accuracy','precision','recall','f1'), cv=cv, n_jobs=-1) #n_jobs=-1 use all processor to run in parallel
+scores_xgb = cross_validate(model_xgb, X, y, return_train_score=True, scoring=('accuracy','precision','recall','f1'), cv=cv, n_jobs=-1)
+
+from numpy import mean
+from numpy import std
+
+# report performance for Random Forest Classifier
+print('\n\nRandomForestClassifier Scores with 10-fold CV:')
+print('\nTrain Metrics:\n')
+print('Accuracy: %.3f (%.3f)' % (mean(scores_rfc['train_accuracy']), std(scores_rfc['train_accuracy'])))
+print('Precision: %.3f (%.3f)' % (mean(scores_rfc['train_precision']), std(scores_rfc['train_precision'])))
+print('Recall: %.3f (%.3f)' % (mean(scores_rfc['train_recall']), std(scores_rfc['train_recall'])))
+print('F1: %.3f (%.3f)' % (mean(scores_rfc['train_f1']), std(scores_rfc['train_f1'])))
+
+print('\nTest Metrics:\n')
+print('Accuracy: %.3f (%.3f)' % (mean(scores_rfc['test_accuracy']), std(scores_rfc['test_accuracy'])))
+print('Precision: %.3f (%.3f)' % (mean(scores_rfc['test_precision']), std(scores_rfc['test_precision'])))
+print('Recall: %.3f (%.3f)' % (mean(scores_rfc['test_recall']), std(scores_rfc['test_recall'])))
+print('F1: %.3f (%.3f)' % (mean(scores_rfc['test_f1']), std(scores_rfc['test_f1'])))
+
+# report performance XG-Boost Classifier
+print('\n\nXG-Boost Classifier with 10-fold CV:')
+print('\nTrain Metrics:\n')
+print('Accuracy: %.3f (%.3f)' % (mean(scores_xgb['train_accuracy']), std(scores_rfc['train_accuracy'])))
+print('Precision: %.3f (%.3f)' % (mean(scores_xgb['train_precision']), std(scores_rfc['train_precision'])))
+print('Recall: %.3f (%.3f)' % (mean(scores_xgb['train_recall']), std(scores_rfc['train_recall'])))
+print('F1: %.3f (%.3f)' % (mean(scores_xgb['train_f1']), std(scores_rfc['train_f1'])))
+
+print('\nTest Metrics:\n')
+print('Accuracy: %.3f (%.3f)' % (mean(scores_xgb['test_accuracy']), std(scores_rfc['test_accuracy'])))
+print('Precision: %.3f (%.3f)' % (mean(scores_xgb['test_precision']), std(scores_rfc['test_precision'])))
+print('Recall: %.3f (%.3f)' % (mean(scores_xgb['test_recall']), std(scores_rfc['test_recall'])))
+print('F1: %.3f (%.3f)' % (mean(scores_xgb['test_f1']), std(scores_rfc['test_f1'])))
+
+# print('\n RandomForestClassifier Scores with 10-fold CV:\n')
+# print(scores_rfc)
+# print('\n COMPLETE XG-Boost Classifier with 10-fold CV:\n')
+# print(scores_xgb)
