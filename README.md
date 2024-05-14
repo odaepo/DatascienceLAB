@@ -16,4 +16,4 @@ Questo repository puo' essere gestito anche tramite
 ### tSNE
 
 - `001_tSNE/` contiene il codice discusso nei primi incontri
-- 
+- `002_immobili/` contiene il codice del progetto immobili
